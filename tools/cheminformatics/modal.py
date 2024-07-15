@@ -25,7 +25,7 @@ def tanimoto(s1: str, s2: str) -> float:
         return "Error: Not a valid SMILES string"
 
 
-@app.function
+app.function(image=rdkit_image)
 def get_number_of_topologically_distinct_atoms(smiles: str, atomic_number: int = 1):
     """Return the number of unique `element` environments based on environmental topology.
     This corresponds to the number of peaks one could maximally observe in an NMR spectrum.
