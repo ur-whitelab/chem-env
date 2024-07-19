@@ -8,8 +8,8 @@ on:
       - main
   workflow_dispatch:
 jobs:
-  modal_deply:
-    name: Deploy
+  modal_deploy_test:
+    name: Deploy and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
