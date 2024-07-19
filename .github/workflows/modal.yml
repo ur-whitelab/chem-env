@@ -1,33 +1,26 @@
-name: Modal Deploy
-
+name: Deploy dev and test
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
   modal_deply:
     name: Deploy
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
           cache: pip
-
       - name: Install Modal
-        run: pip install -r dev-requirements.txt -r modal/requirements.txt
-
-      - name: Deploy job (wildcard for all files)
-        run: |
-          for file in $(find tools -type f -name 'modal.py'); do
-            modal deploy $file
-          done
+        run: pip install -r requirements.txt
+      - name: Deploy to dev
+        run: modal deploy tools/deploy.py
         env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables
           MODAL_DEPLOY_TOKEN: ${{ secrets.MODAL_DEPLOY_TOKEN }}
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          MODAL_ENVIRONMENT: chemistry
+          CHEMENV_NAME: "-dev"
+      - name: Run tests
+        run: pytest tests/

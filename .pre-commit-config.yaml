@@ -77,7 +77,6 @@ repos:
       - id: mypy
         additional_dependencies:
           - types-requests
-          - types-fastapi
   - repo: https://github.com/srstevenson/nb-clean
     rev: 3.3.0
     hooks:
