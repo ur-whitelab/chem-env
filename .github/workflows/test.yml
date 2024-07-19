@@ -1,6 +1,6 @@
 name: Deploy dev and test
 on:
-  push:
+  pull_request:
     branches:
       - main
   workflow_dispatch:
@@ -24,3 +24,7 @@ jobs:
           CHEMENV_NAME: "-dev"
       - name: Run tests
         run: pytest tests/
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          CHEMENV_NAME: "-dev"
