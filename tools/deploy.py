@@ -9,5 +9,3 @@ if chemenv_name and not chemenv_name.startswith("-"):
     chemenv_name = f"-{chemenv_name}"
 app = App(f"chemenv{chemenv_name}")
 app.include(cheminf_app)
-
-

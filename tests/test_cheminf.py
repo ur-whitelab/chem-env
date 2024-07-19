@@ -1,6 +1,7 @@
 import pytest
 import modal
 
+
 @pytest.mark.asyncio
 async def test_tanimoto(app_name):
     fxn = modal.Function.lookup(app_name, "tanimoto")

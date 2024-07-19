@@ -19,5 +19,5 @@ def tanimoto(s1: str, s2: str) -> float:
         fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1, 2, nBits=2048)
         fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2, 2, nBits=2048)
         return DataStructs.TanimotoSimilarity(fp1, fp2)
-    except (TypeError, ValueError, AttributeError):
-        return "Error: Not a valid SMILES string"
+    except (TypeError, ValueError, AttributeError) as e:
+        raise ValueError("Invalid SMILES strings") from e
