@@ -19,8 +19,8 @@ jobs:
       - name: Deploy to dev
         run: modal deploy tools/deploy.py
         env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables
-          MODAL_DEPLOY_TOKEN: ${{ secrets.MODAL_DEPLOY_TOKEN }}
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
           CHEMENV_NAME: "-dev"
       - name: Run tests
         run: pytest tests/
