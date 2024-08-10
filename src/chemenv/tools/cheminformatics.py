@@ -1,18 +1,7 @@
-from modal import App
-from modal import Image
-
-rdkit_image = Image.debian_slim(python_version="3.12").pip_install("rdkit")
-with rdkit_image.imports():
-    from rdkit import Chem, DataStructs
-    from rdkit.Chem import AllChem
-
-
-app = App()
-
-
-@app.function(image=rdkit_image)
 def tanimoto(s1: str, s2: str) -> float:
     """Calculate the Tanimoto similarity of two SMILES strings."""
+    from rdkit import Chem, DataStructs
+    from rdkit.Chem import AllChem
     try:
         mol1 = Chem.MolFromSmiles(s1)
         mol2 = Chem.MolFromSmiles(s2)

@@ -17,8 +17,8 @@ jobs:
         with:
           python-version: 3.12
           cache: pip
-      - name: Install Modal
-        run: pip install -r requirements.txt
+      - name: Install Package
+        run: pip install -e .
       - name: Deploy to dev
         run: modal deploy tools/deploy.py
         env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables

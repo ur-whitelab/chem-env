@@ -1,7 +1,7 @@
 from modal import App
 import os
 
-from cheminf.cheminf import app as cheminf_app
+from chemenv.modal import app as cheminf_app
 
 # set a post-fix for testing/staging
 chemenv_name = os.getenv("CHEMENV_NAME", "")
