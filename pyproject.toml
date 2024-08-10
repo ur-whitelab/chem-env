@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chem-env"
+description = "A package for chemical informatics tools for use in tool-augmented systems"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { file = "LICENSE" }
+authors = [{ name = "ChemEnv authors" }]
+dependencies = [
+    "mendeleev",
+    "modal",
+    # Add other dependencies here
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = ["pytest", "pre-commit"]
+
+[tool.setuptools_scm]
+write_to = "src/cheminformatics/_version.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
