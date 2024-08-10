@@ -24,11 +24,20 @@ def tanimoto(s1: str, s2: str) -> float:
         raise ValueError("Invalid SMILES strings") from e
 
 
-app.function(image=rdkit_image)
+@app.function(image=rdkit_image)
 def get_number_of_topologically_distinct_atoms(smiles: str, atomic_number: int = 1):
     """Return the number of unique `element` environments based on environmental topology.
     This corresponds to the number of peaks one could maximally observe in an NMR spectrum.
 
+    Example:
+
+        get_number_of_topologically_distinct_atoms("CCO", 6)
+        # Output: 2
+        # Explanation: There are two unique carbon environments in ethanol.
+
+        get_number_of_topologically_distinct_atoms("CCO", 1)
+        # Output: 3
+        # Explanation: There are three unique hydrogen environments in ethanol.
     Args:
         smiles (str): SMILES string
         atomic_number (int, optional): Atomic number. Defaults to 1.
