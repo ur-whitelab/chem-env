@@ -1,0 +1,6 @@
+pre-commit
+modal
+pytest
+pytest-asyncio
+pytest-sugar
+pytest-timer

@@ -1,0 +1,34 @@
+name: Deploy dev and test
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  modal_deploy_test:
+    name: Deploy and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+      - name: Install Modal
+        run: pip install -r requirements.txt
+      - name: Deploy to dev
+        run: modal deploy tools/deploy.py
+        env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          # name is -dev in PRs and empty in main branch
+          CHEMENV_NAME: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' && '' || '-dev' }}
+      - name: Run tests
+        run: pytest tests/
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          CHEMENV_NAME: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' && '' || '-dev' }}
