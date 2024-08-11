@@ -2,7 +2,7 @@ name: PR Actions
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, labeled]
+    types: [opened, reopened, synchronize]
 
 jobs:
   check_label_and_tests:
