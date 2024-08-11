@@ -1,8 +1,5 @@
 name: Test, Deploy, and Verify
 on:
-  pull_request:
-    branches:
-      - main
   pull_request_target:
     types: [opened, reopened, synchronize, labeled]
   push:
@@ -10,8 +7,7 @@ on:
       - main
   workflow_dispatch:
 jobs:
-  pre_deploy_test:
-    name: Run Pre-Deployment Tests
+  check_and_run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,20 +22,10 @@ jobs:
         run: pip install poetry
       - name: Install dependencies
         run: poetry install
-      - name: Run pre-deployment tests
-        run: poetry run pytest tests --ignore=tests/test_modal.py
-  check_label_and_deploy:
-    needs: pre_deploy_test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: Check for 'safe to deploy' label
         id: check_label
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
             if [[ ${{ contains(github.event.pull_request.labels.*.name, 'safe to deploy') }} == 'true' ]]; then
               echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
             else
@@ -48,28 +34,42 @@ jobs:
           else
             echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
           fi
-      - name: Set up Python
-        if: steps.check_label.outputs.safe_to_deploy == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.12
-      - name: Install Poetry
-        if: steps.check_label.outputs.safe_to_deploy == 'true'
-        run: pip install poetry
-      - name: Install dependencies
-        if: steps.check_label.outputs.safe_to_deploy == 'true'
-        run: poetry install
+      - name: Run pre-deployment tests
+        run: poetry run pytest tests --ignore=tests/test_modal.py
+      - name: Check for Modal secrets
+        id: check_secrets
+        run: |
+          if [ -z "${{ secrets.MODAL_TOKEN_ID }}" ] || [ -z "${{ secrets.MODAL_TOKEN_SECRET }}" ]; then
+            echo "modal_secrets_set=false" >> $GITHUB_OUTPUT
+            echo "Error: Modal secrets are not properly set in the repository settings."
+          else
+            echo "modal_secrets_set=true" >> $GITHUB_OUTPUT
+          fi
       - name: Deploy to dev
-        if: steps.check_label.outputs.safe_to_deploy == 'true'
+        if: steps.check_label.outputs.safe_to_deploy == 'true' && steps.check_secrets.outputs.modal_secrets_set == 'true' # pragma: allowlist secret
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          CHEMENV_NAME: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' && '-dev' || '' }}
-        run: poetry run chemenv deploy
+          CHEMENV_NAME: ${{ github.event_name == 'pull_request_target' && '-dev' || '' }}
+        run: |
+          echo "MODAL_TOKEN_ID is set: ${{ env.MODAL_TOKEN_ID != '' }}"
+          echo "MODAL_TOKEN_SECRET is set: ${{ env.MODAL_TOKEN_SECRET != '' }}"
+          echo "CHEMENV_NAME: ${{ env.CHEMENV_NAME }}"
+          poetry run chemenv deploy
       - name: Run post-deployment tests
-        if: steps.check_label.outputs.safe_to_deploy == 'true'
+        if: steps.check_label.outputs.safe_to_deploy == 'true' && steps.check_secrets.outputs.modal_secrets_set == 'true' # pragma: allowlist secret
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          CHEMENV_NAME: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' && '-dev' || '' }}
+          CHEMENV_NAME: ${{ github.event_name == 'pull_request_target' && '-dev' || '' }}
         run: poetry run pytest tests/test_modal.py
+      - name: Error if deployment conditions not met
+        if: steps.check_label.outputs.safe_to_deploy != 'true' || steps.check_secrets.outputs.modal_secrets_set != 'true' # pragma: allowlist secret
+        run: |
+          if [ "${{ steps.check_label.outputs.safe_to_deploy }}" != "true" ]; then
+            echo "Error: The 'safe to deploy' label is not present on this pull request."
+          fi
+          if [ "${{ steps.check_secrets.outputs.modal_secrets_set }}" != "true" ]; then
+            echo "Error: Modal secrets are not properly set in the repository settings."
+          fi
+          exit 1
