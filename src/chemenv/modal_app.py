@@ -4,6 +4,7 @@ from chemenv.tools.cheminformatics import (
     get_number_of_topologically_distinct_atoms as _get_topologically_distinct_atoms,
     get_element_info as _get_element_info,
 )
+import os
 
 # Define the images
 rdkit_image = (
@@ -11,8 +12,13 @@ rdkit_image = (
 )
 mendeleev_image = Image.debian_slim().pip_install("mendeleev")
 
+
+chemenv_name = os.getenv("CHEMENV_NAME", "")
+if chemenv_name and not chemenv_name.startswith("-"):
+    chemenv_name = f"-{chemenv_name}"
+
 # Create the app
-app = App()
+app = App(f"chemenv{chemenv_name}")
 
 
 @app.function(image=rdkit_image)
