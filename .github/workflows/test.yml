@@ -1,49 +1,72 @@
-name: Deploy dev and test
+name: Test, Deploy, and Verify
 on:
   pull_request:
     branches:
       - main
+  pull_request_target:
+    types: [labeled]
   push:
     branches:
       - main
   workflow_dispatch:
 jobs:
-  modal_deploy_test:
-    name: Deploy and test
+  pre_deploy_test:
+    name: Run Pre-Deployment Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
       - name: Install Poetry
         run: pip install poetry
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v3
+      - name: Install dependencies
+        run: poetry install
+      - name: Run pre-deployment tests
+        run: poetry run pytest tests --ignore=tests/test_modal.py
+  check_label:
+    runs-on: ubuntu-latest
+    outputs:
+      run_deploy: ${{ steps.check.outputs.run_deploy }}
+    steps:
+      - id: check
+        if: github.event_name == 'pull_request_target'
+        run: |
+          if [[ ${{ contains(github.event.pull_request.labels.*.name, 'safe to deploy') }} == 'true' ]]; then
+            echo "run_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_deploy=false" >> $GITHUB_OUTPUT
+          fi
+  deploy_and_test:
+    needs: [pre_deploy_test, check_label]
+    if: |
+      (github.event_name == 'pull_request_target' && needs.check_label.outputs.run_deploy == 'true') ||
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
+    name: Deploy to Modal and Run Post-Deployment Tests
+    runs-on: ubuntu-latest
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      CHEMENV_NAME: ${{ github.event_name == 'pull_request_target' && '-dev' || '' }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-      - name: Cache dependencies
-        uses: actions/cache@v3
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: .venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-venv-
+          python-version: 3.12
+      - name: Install Poetry
+        run: pip install poetry
       - name: Install dependencies
         run: poetry install
       - name: Deploy to dev
         run: poetry run chemenv deploy
-        env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          CHEMENV_NAME: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' && '' || '-dev' }}
-      - name: Run tests
-        run: poetry run pytest tests/
-        env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          CHEMENV_NAME: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' && '' || '-dev' }}
+      - name: Run post-deployment tests
+        run: poetry run pytest tests/test_modal.py
