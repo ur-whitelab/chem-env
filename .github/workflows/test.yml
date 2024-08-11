@@ -18,7 +18,9 @@ jobs:
           python-version: 3.12
           cache: pip
       - name: Install Package
-        run: pip install -e .
+        run: |
+          pip install poetry
+          poetry install
       - name: Deploy to dev
         run: chemenv deploy
         env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables
