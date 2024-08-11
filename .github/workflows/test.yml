@@ -1,36 +1,44 @@
 name: Test, Deploy, and Verify
+
 on:
   pull_request:
-    types: [opened, reopened, synchronize, labeled]
+    types: [opened, reopened, synchronize]
   pull_request_target:
-    types: [opened, reopened, labeled, synchronize]
+    types: [labeled, synchronize]
   push:
     branches:
       - main
-      - "**" # Capture pushes to PR branches
+      - "**"
   workflow_dispatch:
+
 jobs:
   check_and_run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
+
       - name: Install Poetry
         run: pip install poetry
+
       - name: Install dependencies
         run: poetry install
+
       - name: Check for 'safe to deploy' label
         id: check_label
         run: |
           echo "Event name: ${{ github.event_name }}"
           echo "Event action: ${{ github.event.action }}"
-          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
             if [[ ${{ contains(github.event.pull_request.labels.*.name, 'safe to deploy') }} == 'true' ]]; then
               echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
             else
@@ -39,20 +47,21 @@ jobs:
           else
             echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
           fi
+
       - name: Run pre-deployment tests
         if: steps.check_label.outputs.safe_to_deploy == 'true'
         run: poetry run pytest tests --ignore=tests/test_modal.py
+
       - name: Check for Modal secrets
         id: check_secrets
-        if: |
-          steps.check_label.outputs.safe_to_deploy == 'true' &&
-          github.event_name != 'pull_request'
+        if: steps.check_label.outputs.safe_to_deploy == 'true'
         run: |
           if [ -z "${{ secrets.MODAL_TOKEN_ID }}" ] || [ -z "${{ secrets.MODAL_TOKEN_SECRET }}" ]; then
             echo "modal_secrets_set=false" >> $GITHUB_OUTPUT
           else
             echo "modal_secrets_set=true" >> $GITHUB_OUTPUT
           fi
+
       - name: Deploy to dev
         if: |
           steps.check_label.outputs.safe_to_deploy == 'true' &&
@@ -61,6 +70,7 @@ jobs:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: poetry run chemenv deploy
+
       - name: Run post-deployment tests
         if: |
           steps.check_label.outputs.safe_to_deploy == 'true' &&
@@ -69,6 +79,7 @@ jobs:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: poetry run pytest tests/test_modal.py
+
       - name: Workflow summary
         run: |
           echo "Workflow Summary:"
