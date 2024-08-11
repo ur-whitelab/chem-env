@@ -20,7 +20,7 @@ jobs:
       - name: Install Package
         run: pip install -e .
       - name: Deploy to dev
-        run: modal deploy tools/deploy.py
+        run: chemenv deploy
         env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}

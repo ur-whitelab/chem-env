@@ -3,10 +3,10 @@ import modal
 
 
 @pytest.mark.asyncio
-async def test_get_tanimoto(app_name):
-    fxn = modal.Function.lookup(app_name, "get_tanimoto")
+async def test_get_tanimoto_similarity(app_name):
+    fxn = modal.Function.lookup(app_name, "get_tanimoto_similarity")
     result = await fxn.remote.aio("CCO", "CC")
-    assert abs(result - 0.143) < 0.001
+    assert pytest.approx(result, abs=0.001) == 0.143
 
 
 @pytest.mark.asyncio
