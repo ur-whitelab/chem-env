@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chem-env"
+description = "A package for chemical informatics tools"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file = "LICENSE"}
+authors = [{name = "ChemEnv authors"}]
+dependencies = ["modal", "rdkit"]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = ["pytest", "pre-commit", "ruff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools_scm]
+write_to = "src/chemenv/_version.py"

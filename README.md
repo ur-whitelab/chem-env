@@ -2,7 +2,7 @@
 
 `chem-env` provides Python tools for chemistry that can easily be deployed as modal apps.
 
-## Usage 
+## Usage
 
 ### Chemistry tools
 
