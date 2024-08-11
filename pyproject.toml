@@ -12,7 +12,7 @@ readme = "README.md"
 packages = [{include = "chemenv", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.9"
 modal = "*"
 rdkit = "*"
 mendeleev = "*"
