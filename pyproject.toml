@@ -13,9 +13,11 @@ dependencies = ["modal", "rdkit", "mendeleev"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["pytest", "pre-commit", "ruff"]
+dev = ["pytest", "pre-commit", "ruff", "pytest-asyncio"]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = ["asyncio: mark test as async"]
 testpaths = ["tests"]
 
 [tool.setuptools_scm]
