@@ -1,4 +1,4 @@
-def tanimoto(s1: str, s2: str) -> float:
+def get_tanimoto_similarity(s1: str, s2: str) -> float:
     """
     Calculate the Tanimoto similarity of two SMILES strings.
 
@@ -17,7 +17,7 @@ def tanimoto(s1: str, s2: str) -> float:
     The Tanimoto similarity is then calculated using the DataStructs module of the RDKit library.
 
     Example:
-        >>> tanimoto("CCO", "CC")
+        >>> get_tanimoto_similarity("CCO", "CC")
         0.143
     """
     from rdkit import Chem, DataStructs
@@ -48,10 +48,10 @@ def get_number_of_topologically_distinct_atoms(smiles: str, atomic_number: int =
 
     Example:
         >>> get_number_of_topologically_distinct_atoms("CCO", 1)
-        2
+        3
 
         >>> get_number_of_topologically_distinct_atoms("CCO", 6)
-        1
+        2
     """
 
     from rdkit import Chem
@@ -84,3 +84,49 @@ def get_number_of_topologically_distinct_atoms(smiles: str, atomic_number: int =
         return len(set(atom_ranks[atom_indices]))
     except (TypeError, ValueError, AttributeError):
         return "Error: Not a valid SMILES string"
+
+
+def get_element_info(identifier: str) -> dict:
+    """
+    A function to retrieve basic information about a chemical element based on its identifier.
+
+    Args:
+        identifier (str): The identifier of the chemical element.
+
+    Returns:
+        dict: A dictionary containing basic information about the chemical element including its name,
+            symbol, atomic number, mass, electron configuration, electronegativity, group, period, and block.
+
+    Raises:
+        ValueError: If the identifier is not a valid element identifier.
+
+    Example:
+        >>> get_element_info("H")["name"]
+        'Hydrogen'
+    """
+    from mendeleev import element
+
+    try:
+        # Try to get the element
+        if isinstance(identifier, int) or identifier.isdigit():
+            el = element(int(identifier))
+        else:
+            el = element(identifier)
+
+        # Collect basic information
+        info = {
+            "name": el.name,
+            "symbol": el.symbol,
+            "atomic_number": el.atomic_number,
+            "mass": el.mass,
+            "electron_configuration": str(el.ec.conf),
+            "electronegativity": el.electronegativity,
+            "group": el.group.name if el.group else None,
+            "period": el.period,
+            "block": el.block,
+        }
+
+        return info
+
+    except ValueError:
+        raise ValueError(f"Error: '{identifier}' is not a valid element identifier.")
