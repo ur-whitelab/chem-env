@@ -1,39 +1,23 @@
 name: PR Checks
-
 on:
   pull_request:
     types: [opened, reopened, synchronize, labeled]
-
 jobs:
   pr_checks:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.12
-
       - name: Install Poetry
         run: pip install poetry
-
       - name: Install dependencies
         run: poetry install
-
-      - name: Check for 'safe to deploy' label
-        id: check_label
-        run: |
-          if [[ ${{ contains(github.event.pull_request.labels.*.name, 'safe to deploy') }} == 'true' ]]; then
-            echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "safe_to_deploy=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Run pre-deployment tests
         if: steps.check_label.outputs.safe_to_deploy == 'true'
         run: poetry run pytest tests --ignore=tests/test_modal.py
