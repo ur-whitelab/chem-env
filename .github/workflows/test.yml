@@ -1,34 +1,90 @@
-name: Deploy dev and test
+name: Test, Deploy, and Verify
 on:
   pull_request:
-    branches:
-      - main
+    types: [opened, reopened, synchronize]
+  pull_request_target:
+    types: [labeled, synchronize]
   push:
     branches:
       - main
+      - "**"
   workflow_dispatch:
 jobs:
-  modal_deploy_test:
-    name: Deploy and test
+  check_and_run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: 3.12
-          cache: pip
-      - name: Install Modal
-        run: pip install -r requirements.txt
+      - name: Install uv
+        run: pip install uv
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          . .venv/bin/activate
+          uv pip install -e ".[dev]"
+      - name: Check for 'safe to deploy' label
+        id: check_label
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Event action: ${{ github.event.action }}"
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+            if [[ ${{ contains(github.event.pull_request.labels.*.name, 'safe to deploy') }} == 'true' ]]; then
+              echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "safe_to_deploy=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "safe_to_deploy=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Run pre-deployment tests
+        if: steps.check_label.outputs.safe_to_deploy == 'true'
+        run: |
+          . .venv/bin/activate
+          pytest tests --ignore=tests/test_modal.py
+      - name: Check for Modal secrets
+        id: check_secrets
+        if: steps.check_label.outputs.safe_to_deploy == 'true'
+        run: |
+          if [ -z "${{ secrets.MODAL_TOKEN_ID }}" ] || [ -z "${{ secrets.MODAL_TOKEN_SECRET }}" ]; then
+            echo "modal_secrets_set=false" >> $GITHUB_OUTPUT
+          else
+            echo "modal_secrets_set=true" >> $GITHUB_OUTPUT
+          fi
       - name: Deploy to dev
-        run: modal deploy tools/deploy.py
-        env: # SEE: https://modal.com/docs/guide/environment_variables#runtime-environment-variables
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          # name is -dev in PRs and empty in main branch
-          CHEMENV_NAME: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' && '' || '-dev' }}
-      - name: Run tests
-        run: pytest tests/
+        if: |
+          steps.check_label.outputs.safe_to_deploy == 'true' &&
+          steps.check_secrets.outputs.modal_secrets_set == 'true'
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-          CHEMENV_NAME: ${{ github.event_name == 'pull_request' && github.ref == 'refs/heads/main' && '' || '-dev' }}
+        run: |
+          . .venv/bin/activate
+          chemenv deploy
+      - name: Run post-deployment tests
+        if: |
+          steps.check_label.outputs.safe_to_deploy == 'true' &&
+          steps.check_secrets.outputs.modal_secrets_set == 'true'
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          . .venv/bin/activate
+          pytest tests/test_modal.py
+      - name: Workflow summary
+        run: |
+          echo "Workflow Summary:"
+          echo "Safe to deploy: ${{ steps.check_label.outputs.safe_to_deploy }}"
+          echo "Modal secrets set: ${{ steps.check_secrets.outputs.modal_secrets_set }}"
+          if [ "${{ steps.check_label.outputs.safe_to_deploy }}" != "true" ]; then
+            echo "The 'safe to deploy' label is not present on this pull request."
+          fi
+          if [ "${{ steps.check_secrets.outputs.modal_secrets_set }}" != "true" ]; then
+            echo "Modal secrets are not properly set."
+          fi

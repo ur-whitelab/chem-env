@@ -1,0 +1,28 @@
+name: PR Checks
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+jobs:
+  pr_checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install uv
+        run: pip install uv
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          . .venv/bin/activate
+          uv pip install -e ".[dev]"
+      - name: Run pre-deployment tests
+        if: steps.check_label.outputs.safe_to_deploy == 'true'
+        run: |
+          . .venv/bin/activate
+          pytest tests --ignore=tests/test_modal.py
