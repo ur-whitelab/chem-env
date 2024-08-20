@@ -1,38 +1,30 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0", "setuptools-scm>=6.2"]
+build-backend = "setuptools.build_meta"
 
-[tool.poetry]
+[project]
 name = "chem-env"
-version = "0.1.0"
 description = "A package for chemical informatics tools"
-authors = ["ChemEnv authors"]
-license = "LICENSE"
+authors = [{name = "ChemEnv authors"}]
+license = {file = "LICENSE"}
 readme = "README.md"
-packages = [{include = "chemenv", from = "src"}]
+requires-python = ">=3.9"
+dynamic = ["version"]
+dependencies = ["modal", "rdkit", "mendeleev", "fire"]
 
-[tool.poetry.dependencies]
-python = ">=3.9"
-modal = "*"
-rdkit = "*"
-mendeleev = "*"
-fire = "*"
+[project.optional-dependencies]
+dev = ["pytest", "pre-commit", "ruff", "pytest-asyncio"]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pre-commit = "*"
-ruff = "*"
-pytest-asyncio = "*"
-
-[tool.poetry.scripts]
+[project.scripts]
 chemenv = "chemenv.cli:main"
-
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "pep440"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 markers = ["asyncio: mark test as async"]
 testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools_scm]
+write_to = "src/chemenv/_version.py"
